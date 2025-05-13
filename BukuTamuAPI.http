@@ -1,0 +1,6 @@
+@BukuTamuAPI_HostAddress = http://localhost:5153
+
+GET {{BukuTamuAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

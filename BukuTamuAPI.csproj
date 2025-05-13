@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.10" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="publish\publish\publish\web.config" />
+      <_ContentIncludedByDefault Remove="publish\publish\web.config" />
+      <_ContentIncludedByDefault Remove="publish\web.config" />
+      <_ContentIncludedByDefault Remove="publish\appsettings.Development.json" />
+      <_ContentIncludedByDefault Remove="publish\appsettings.json" />
+      <_ContentIncludedByDefault Remove="publish\BukuTamuAPI.deps.json" />
+      <_ContentIncludedByDefault Remove="publish\BukuTamuAPI.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="publish\global.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\appsettings.Development.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\appsettings.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\BukuTamuAPI.deps.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\BukuTamuAPI.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\global.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\publish\appsettings.Development.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\publish\appsettings.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\publish\BukuTamuAPI.deps.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\publish\BukuTamuAPI.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="publish\publish\publish\global.json" />
+    </ItemGroup>
+
+</Project>
