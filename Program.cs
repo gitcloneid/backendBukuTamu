@@ -125,7 +125,7 @@ using (var scope = app.Services.CreateScope())
         context.SaveChanges();
     }
 }
-
+app.Urls.Add("http://0.0.0.0:5000");
 // Configure the HTTP request pipeline.
 app.UseSwagger();
 app.UseSwaggerUI();
