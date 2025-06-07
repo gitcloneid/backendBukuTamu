@@ -1,6 +1,8 @@
 ﻿using BukuTamuAPI.DTOs;
 using BukuTamuAPI.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System.Security.Cryptography.X509Certificates;
 
 namespace BukuTamuAPI.Services;
 
@@ -63,6 +65,12 @@ public class TamuService : ITamuService
             Telepon = tamu.Telepon
         };
     }
+
+
+    //public async Task<IEnumerable<AppointmentResponse>> ResponseAppointmentTamu()
+    //{
+      
+    //}
 
     public async Task<TamuResponse> UpdateTamu(int id, TamuUpdateRequest request)
     {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System;
 using System.Collections.Generic;
 
 namespace BukuTamuAPI.Models;
@@ -14,7 +15,6 @@ public partial class Pengguna
     public string Password { get; set; } = null!;
 
     public string Role { get; set; } = null!;
-
     public virtual ICollection<JanjiTemu> JanjiTemus { get; set; } = new List<JanjiTemu>();
 
     public virtual ICollection<Notifikasi> Notifikasis { get; set; } = new List<Notifikasi>();

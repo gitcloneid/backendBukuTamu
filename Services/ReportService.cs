@@ -26,13 +26,24 @@ public class ReportService : IReportService
     public async Task<DailyReportResponse> GetDailyReport(DateTime? date = null)
     {
         var reportDate = date ?? DateTime.Today;
-        var dateOnly = DateOnly.FromDateTime(reportDate);
+        var startDate = new DateTime(reportDate.Year, reportDate.Month, reportDate.Day, 0, 0, 0);
+        var endDate = new DateTime(reportDate.Year, reportDate.Month, reportDate.Day, 23, 59, 59);
 
-        var appointments = await _context.JanjiTemus
+        // Use shadow property TanggalWaktu for date filtering
+        var janjiTemuList = await _context.JanjiTemus
             .Include(j => j.IdGuruNavigation)
             .Include(j => j.IdTamuNavigation)
-            .Where(j => j.Tanggal == dateOnly)
+            .Where(j => EF.Property<DateTime>(j, "TanggalWaktu") >= startDate &&
+                       EF.Property<DateTime>(j, "TanggalWaktu") <= endDate)
             .ToListAsync();
+
+        // Populate the ignored properties from shadow property
+        foreach (var janjiTemu in janjiTemuList)
+        {
+            janjiTemu.LoadFromTanggalWaktu(_context);
+        }
+
+        var appointments = janjiTemuList;
 
         var total = appointments.Count;
         var completed = appointments.Count(j => j.Status == "Selesai");
@@ -80,13 +91,24 @@ public class ReportService : IReportService
 
         var startDate = ISOWeek.ToDateTime(targetYear, targetWeek, DayOfWeek.Monday);
         var endDate = startDate.AddDays(6);
+        var startDateTime = new DateTime(startDate.Year, startDate.Month, startDate.Day, 0, 0, 0);
+        var endDateTime = new DateTime(endDate.Year, endDate.Month, endDate.Day, 23, 59, 59);
 
-        var appointments = await _context.JanjiTemus
+        // Use shadow property TanggalWaktu for date filtering
+        var janjiTemuList = await _context.JanjiTemus
             .Include(j => j.IdGuruNavigation)
             .Include(j => j.IdTamuNavigation)
-            .Where(j => j.Tanggal >= DateOnly.FromDateTime(startDate) && 
-                        j.Tanggal <= DateOnly.FromDateTime(endDate))
+            .Where(j => EF.Property<DateTime>(j, "TanggalWaktu") >= startDateTime &&
+                       EF.Property<DateTime>(j, "TanggalWaktu") <= endDateTime)
             .ToListAsync();
+
+        // Populate the ignored properties from shadow property
+        foreach (var janjiTemu in janjiTemuList)
+        {
+            janjiTemu.LoadFromTanggalWaktu(_context);
+        }
+
+        var appointments = janjiTemuList;
 
         var dailyStats = new List<DailyStat>();
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
@@ -123,7 +145,7 @@ public class ReportService : IReportService
         var targetMonth = month ?? currentDate.Month;
         var targetYear = year ?? currentDate.Year;
 
-        // bulan
+        // Validasi bulan
         if (targetMonth < 1 || targetMonth > 12)
         {
             throw new ArgumentException("Month must be between 1 and 12");
@@ -135,35 +157,51 @@ public class ReportService : IReportService
 
         var startDate = new DateTime(targetYear, targetMonth, 1);
         var endDate = startDate.AddMonths(1).AddDays(-1);
+        var startDateTime = new DateTime(startDate.Year, startDate.Month, startDate.Day, 0, 0, 0);
+        var endDateTime = new DateTime(endDate.Year, endDate.Month, endDate.Day, 23, 59, 59);
 
-        var appointments = await _context.JanjiTemus
+        // Use shadow property TanggalWaktu for date filtering
+        var janjiTemuList = await _context.JanjiTemus
             .Include(j => j.IdGuruNavigation)
             .Include(j => j.IdTamuNavigation)
-            .Where(j => j.Tanggal >= DateOnly.FromDateTime(startDate) && 
-                        j.Tanggal <= DateOnly.FromDateTime(endDate))
+            .Where(j => EF.Property<DateTime>(j, "TanggalWaktu") >= startDateTime &&
+                       EF.Property<DateTime>(j, "TanggalWaktu") <= endDateTime)
             .ToListAsync();
+
+        // Populate the ignored properties from shadow property
+        foreach (var janjiTemu in janjiTemuList)
+        {
+            janjiTemu.LoadFromTanggalWaktu(_context);
+        }
+
+        var appointments = janjiTemuList;
 
         var weeklyStats = new List<WeeklyStat>();
         var currentWeekStart = startDate;
+        int weekNumberInMonth = 1; // Counter untuk minggu ke-berapa dalam bulan
+
         while (currentWeekStart <= endDate)
         {
-            var currentWeekEnd = currentWeekStart.AddDays(6) > endDate ? 
+            var currentWeekEnd = currentWeekStart.AddDays(6) > endDate ?
                 endDate : currentWeekStart.AddDays(6);
-            var weekNumber = ISOWeek.GetWeekOfYear(currentWeekStart);
+
+            var currentWeekStartDateOnly = DateOnly.FromDateTime(currentWeekStart);
+            var currentWeekEndDateOnly = DateOnly.FromDateTime(currentWeekEnd);
 
             var weekAppointments = appointments
-                .Where(j => j.Tanggal >= DateOnly.FromDateTime(currentWeekStart) && 
-                            j.Tanggal <= DateOnly.FromDateTime(currentWeekEnd))
+                .Where(j => j.Tanggal >= currentWeekStartDateOnly &&
+                            j.Tanggal <= currentWeekEndDateOnly)
                 .ToList();
 
             weeklyStats.Add(new WeeklyStat
             {
-                WeekNumber = weekNumber,
+                WeekNumber = weekNumberInMonth,
                 Total = weekAppointments.Count,
                 Completed = weekAppointments.Count(j => j.Status == "Selesai")
             });
 
             currentWeekStart = currentWeekStart.AddDays(7);
+            weekNumberInMonth++; // Increment minggu dalam bulan
         }
 
         var total = appointments.Count;

@@ -125,27 +125,49 @@ public class AppointmentsController : ControllerBase
         }
     }
 
-    [HttpGet("qr/{kode}")]
-    public async Task<ActionResult<AppointmentResponse>> VerifyQrCode(string kode)
+    [HttpPut("{id}/reschedule")]
+    public async Task<ActionResult<AppointmentResponse>> RescheduleAppointment(
+        int id,
+        [FromBody] AppointmentRescheduleRequest request)
     {
         try
         {
-            var appointment = await _appointmentService.VerifyQrCode(kode);
-            return Ok(appointment);
+            var updatedAppointment = await _appointmentService.RescheduleAppointment(id, request, _webSocketHandler);
+            return Ok(updatedAppointment);
         }
         catch (KeyNotFoundException ex)
         {
-            _logger.LogWarning(ex, "Kode QR {Kode} tidak valid", kode);
+            _logger.LogWarning(ex, "Janji temu dengan ID {Id} tidak ditemukan", id);
             return NotFound(new { message = ex.Message });
         }
-        catch (InvalidOperationException ex)
+        catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Validasi gagal untuk kode QR {Kode}", kode);
+            _logger.LogWarning(ex, "Invalid input for rescheduling appointment with ID {Id}", id);
             return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saat memverifikasi kode QR {Kode}", kode);
+            _logger.LogError(ex, "Error saat menjadwalkan ulang janji temu dengan ID {Id}", id);
+            return StatusCode(500, new { message = "Terjadi kesalahan internal" });
+        }
+    }
+
+    [HttpGet("qr/{kode}")]
+    public async Task<ActionResult<AppointmentResponse>> CheckAppointmentByQrCode(string kode)
+    {
+        try
+        {
+            var appointment = await _appointmentService.CheckAppointmentByQrCode(kode);
+            return Ok(appointment);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Kode qr tidak valid", kode);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "error validasi", kode);
             return StatusCode(500, new { message = "Terjadi kesalahan internal" });
         }
     }

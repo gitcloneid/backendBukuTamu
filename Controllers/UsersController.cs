@@ -119,7 +119,7 @@ public class UsersController : ControllerBase
         try
         {
             await _userService.DeleteUser(id);
-            return NoContent();
+            return Ok(new { message = "User berhasil dihapus" });
         }
         catch (KeyNotFoundException ex)
         {

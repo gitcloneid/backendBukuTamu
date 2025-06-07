@@ -7,19 +7,21 @@ namespace BukuTamuAPI.Controllers;
 
 [Route("api/tamu")]
 [ApiController]
-[Authorize]
 
 public class TamuController : ControllerBase
 {
+    private readonly IAppointmentService _appointmentService;
     private readonly ITamuService _tamuService;
     private readonly ILogger<TamuController> _logger;
 
-    public TamuController(ITamuService tamuService, ILogger<TamuController> logger)
+    public TamuController(ITamuService tamuService, ILogger<TamuController> logger, IAppointmentService appointmentService)
     {
         _tamuService = tamuService;
         _logger = logger;
+        _appointmentService = appointmentService;
     }
 
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<PagedResponse<TamuResponse>>> GetAllTamu(
         [FromQuery] int page = 1,
@@ -44,6 +46,7 @@ public class TamuController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<TamuResponse>> CreateTamu([FromBody] TamuCreateRequest request)
     {
@@ -59,6 +62,7 @@ public class TamuController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpPut("{id}")]
     public async Task<ActionResult<TamuResponse>> UpdateTamu(int id, [FromBody] TamuUpdateRequest request)
     {
@@ -79,6 +83,7 @@ public class TamuController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<TamuResponse>>> SearchTamu([FromQuery] string q)
     {
@@ -95,6 +100,27 @@ public class TamuController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error saat mencari tamu dengan query: {Query}", q);
+            return StatusCode(500, new { message = "Terjadi kesalahan internal" });
+        }
+    }
+
+
+    [HttpGet("qr/{kode}")]
+    public async Task<ActionResult<AppointmentResponse>> CheckAppointmentByQrCode(string kode)
+    {
+        try
+        {
+            var appointment = await _appointmentService.CheckAppointmentByQrCode(kode);
+            return Ok(appointment);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Kode QR {Kode} tidak valid", kode);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saat memverifikasi kode QR {Kode}", kode);
             return StatusCode(500, new { message = "Terjadi kesalahan internal" });
         }
     }

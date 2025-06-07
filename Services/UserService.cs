@@ -72,34 +72,159 @@ public class UserService : IUserService
 
     public async Task<UserResponse> CreateUser(UserCreateRequest request)
     {
-        if (await _context.Penggunas.AnyAsync(u => u.Email == request.Email))
+        try
         {
-            throw new ArgumentException("Email sudah digunakan");
+            _logger.LogInformation($"[DEBUG] Starting user creation for email: {request.Email}");
+
+            // Check if email already exists
+            var emailExists = await _context.Penggunas.AnyAsync(u => u.Email == request.Email);
+            if (emailExists)
+            {
+                _logger.LogWarning($"[DEBUG] Email already exists: {request.Email}");
+                throw new ArgumentException("Email sudah digunakan");
+            }
+
+            // Validate role
+            if (!new[] { "Admin", "Guru", "Penerima Tamu" }.Contains(request.Role))
+            {
+                _logger.LogWarning($"[DEBUG] Invalid role: {request.Role}");
+                throw new ArgumentException("Role tidak valid");
+            }
+
+            _logger.LogInformation($"[DEBUG] Creating user object...");
+
+            // Create user object
+            var user = new Pengguna
+            {
+                Nama = request.Nama,
+                Email = request.Email,
+                Password = BCrypt.HashPassword(request.Password),
+                Role = request.Role
+            };
+
+            _logger.LogInformation($"[DEBUG] User object created. Adding to context...");
+
+            // Add to context
+            _context.Penggunas.Add(user);
+
+            // Check entity state
+            var entityState = _context.Entry(user).State;
+            _logger.LogInformation($"[DEBUG] Entity state after Add: {entityState}");
+            _logger.LogInformation($"[DEBUG] Temporary ID: {user.IdPengguna}");
+
+            // Check pending changes
+            var pendingChanges = _context.ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added ||
+                           e.State == EntityState.Modified ||
+                           e.State == EntityState.Deleted)
+                .Count();
+
+            _logger.LogInformation($"[DEBUG] Pending changes count: {pendingChanges}");
+
+            // Log database connection info
+            _logger.LogInformation($"[DEBUG] Database provider: {_context.Database.ProviderName}");
+            _logger.LogInformation($"[DEBUG] Connection string: {_context.Database.GetConnectionString()}");
+
+            // Test database connection
+            try
+            {
+                await _context.Database.OpenConnectionAsync();
+                _logger.LogInformation("[DEBUG] Database connection test: SUCCESS");
+                await _context.Database.CloseConnectionAsync();
+            }
+            catch (Exception connEx)
+            {
+                _logger.LogError($"[DEBUG] Database connection test: FAILED - {connEx.Message}");
+                throw;
+            }
+
+            _logger.LogInformation("[DEBUG] Calling SaveChangesAsync...");
+
+            // Save changes with detailed logging
+            var saveResult = await _context.SaveChangesAsync();
+
+            _logger.LogInformation($"[DEBUG] SaveChangesAsync returned: {saveResult}");
+            _logger.LogInformation($"[DEBUG] Final user ID: {user.IdPengguna}");
+
+            // Verify the user was actually saved by querying back
+            _logger.LogInformation($"[DEBUG] Verifying user was saved by re-querying...");
+
+            var savedUser = await _context.Penggunas
+                .FirstOrDefaultAsync(u => u.IdPengguna == user.IdPengguna);
+
+            if (savedUser == null)
+            {
+                _logger.LogError($"[ERROR] User with ID {user.IdPengguna} not found in database after save!");
+                throw new InvalidOperationException("User was not saved to database");
+            }
+
+            _logger.LogInformation($"[DEBUG] User verification: SUCCESS - Found user {savedUser.Email} with ID {savedUser.IdPengguna}");
+
+            // Also try querying by email to double-check
+            var savedUserByEmail = await _context.Penggunas
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
+
+            if (savedUserByEmail == null)
+            {
+                _logger.LogError($"[ERROR] User with email {request.Email} not found in database after save!");
+            }
+            else
+            {
+                _logger.LogInformation($"[DEBUG] Email verification: SUCCESS - Found user with email {savedUserByEmail.Email}");
+            }
+
+            var response = new UserResponse
+            {
+                IdPengguna = user.IdPengguna,
+                Nama = user.Nama,
+                Email = user.Email,
+                Role = user.Role
+            };
+
+            _logger.LogInformation($"[DEBUG] Returning response for user ID: {response.IdPengguna}");
+            return response;
         }
-
-        if (!new[] { "Admin", "Guru", "PenerimaTamu" }.Contains(request.Role))
+        catch (Exception ex)
         {
-            throw new ArgumentException("Role tidak valid");
+            _logger.LogError($"[ERROR] Exception in CreateUser: {ex.Message}");
+            _logger.LogError($"[ERROR] Stack trace: {ex.StackTrace}");
+
+            if (ex.InnerException != null)
+            {
+                _logger.LogError($"[ERROR] Inner exception: {ex.InnerException.Message}");
+                _logger.LogError($"[ERROR] Inner stack trace: {ex.InnerException.StackTrace}");
+            }
+
+            throw;
         }
+    }
 
-        var user = new Pengguna
+    // Add this method for additional debugging
+    public async Task<object> GetDatabaseStats()
+    {
+        try
         {
-            Nama = request.Nama,
-            Email = request.Email,
-            Password = BCrypt.HashPassword(request.Password),
-            Role = request.Role
-        };
+            var totalUsers = await _context.Penggunas.CountAsync();
+            var recentUsers = await _context.Penggunas
+                .OrderByDescending(u => u.IdPengguna)
+                .Take(5)
+                .Select(u => new { u.IdPengguna, u.Email, u.Nama })
+                .ToListAsync();
 
-        _context.Penggunas.Add(user);
-        await _context.SaveChangesAsync();
-
-        return new UserResponse
+            return new
+            {
+                TotalUsers = totalUsers,
+                RecentUsers = recentUsers,
+                DatabaseProvider = _context.Database.ProviderName,
+                ConnectionString = _context.Database.GetConnectionString()?.Substring(0, 50) + "...", // Truncated for security
+                ContextId = _context.ContextId.ToString()
+            };
+        }
+        catch (Exception ex)
         {
-            IdPengguna = user.IdPengguna,
-            Nama = user.Nama,
-            Email = user.Email,
-            Role = user.Role
-        };
+            _logger.LogError($"Error getting database stats: {ex.Message}");
+            throw;
+        }
     }
 
     public async Task<UserResponse> UpdateUser(int id, UserUpdateRequest request)
@@ -130,7 +255,7 @@ public class UserService : IUserService
 
         if (!string.IsNullOrEmpty(request.Role))
         {
-            if (!new[] { "Admin", "Guru", "PenerimaTamu" }.Contains(request.Role))
+            if (!new[] { "Admin", "Guru", "Penerima Tamu" }.Contains(request.Role))
             {
                 throw new ArgumentException("Role tidak valid");
             }
@@ -151,7 +276,7 @@ public class UserService : IUserService
     public async Task DeleteUser(int id)
     {
         var user = await _context.Penggunas.FindAsync(id);
-        
+
         if (user == null)
         {
             throw new KeyNotFoundException("User tidak ditemukan");
